@@ -1,0 +1,3 @@
+[submodule "premake"]
+	path = premake
+	url = https://github.com/rainerzufalldererste/premakeBuild.git
