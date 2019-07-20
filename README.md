@@ -8,7 +8,7 @@ There are a lot of comments in the `shellcode_template` function to better expla
   PEB *pProcessEnvironmentBlock = (PEB *)__readgsqword(0x60);
 
   // `pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList` contains a double linked list.
-  // `Flink` and `Blink` are the pointers to the next element.
+  // `Flink` and `Blink` are pointers to the next and previous element.
   //
   // All Windows executables should have the following module order.
   //  1. The module of the current executable.
@@ -85,9 +85,59 @@ Choose your compiler toolset. (VS 2015 / VS 2017)
 The `shellcode_template` project includes everything to start developing custom shellcode.
 
 ### How to retrieve the shellcode?
-There are many ways to retrieve the generated shellcode. An easy way is to just paste your code into an online compiler like [godbolt.org](https://godbolt.org/) and copy the generated MSVC assembly (ie. `x64 msvc v19.21`) into an online assembler like [https://defuse.ca/online-x86-assembler.htm](https://defuse.ca/online-x86-assembler.htm). Then just copy the generated shellcode.
+There are many ways to retrieve the generated shellcode. 
+The easiest way is probably to just step into `void shellcode_template()` in the Visual Studio Debugger and open the Disassembly View (Ctrl+Alt+D). Make sure to turn on displaying code bytes and turn off displaying source code and addresses to simplify the output.
 
-You will probably have to clean up the assembly a bit, like this:
+```asm
+shellcode_template:
+48 89 5C 24 08       mov         qword ptr [rsp+8],rbx  
+57                   push        rdi  
+48 83 EC 30          sub         rsp,30h  
+65 48 8B 04 25 60 00 00 00 mov         rax,qword ptr gs:[0000000000000060h]  
+49 B9 47 65 74 50 72 6F 63 41 mov         r9,41636F7250746547h  
+33 D2                xor         edx,edx  
+48 8B 48 18          mov         rcx,qword ptr [rax+18h]  
+48 8B 41 20          mov         rax,qword ptr [rcx+20h]  
+48 8B 08             mov         rcx,qword ptr [rax]  
+48 8B 01             mov         rax,qword ptr [rcx]  
+48 8B 78 20          mov         rdi,qword ptr [rax+20h]  
+48 63 47 3C          movsxd      rax,dword ptr [rdi+3Ch]  
+44 8B 84 38 88 00 00 00 mov         r8d,dword ptr [rax+rdi+0000000000000088h]  
+41 8B 44 38 20       mov         eax,dword ptr [r8+rdi+20h]  
+48 03 C7             add         rax,rdi  
+4C 89 4C 24 20       mov         qword ptr [rsp+20h],r9  
+48 63 08             movsxd      rcx,dword ptr [rax]  
+4C 39 0C 39          cmp         qword ptr [rcx+rdi],r9  
+ ...
+```
+
+Now you can just remove the labels and disassembly and you're left with the shellcode:
+
+```
+48 89 5C 24 08
+57
+48 83 EC 30
+65 48 8B 04 25 60 00 00 00
+49 B9 47 65 74 50 72 6F 63 41
+33 D2
+48 8B 48 18
+48 8B 41 20
+48 8B 08
+48 8B 01
+48 8B 78 20
+48 63 47 3C
+44 8B 84 38 88 00 00 00
+41 8B 44 38 20
+48 03 C7
+4C 89 4C 24 20
+48 63 08
+4C 39 0C 39
+ ...
+```
+
+Alternatively you can just paste your code into an online compiler like [godbolt.org](https://godbolt.org/) and copy the generated MSVC assembly (ie. `x64 msvc v19.21`) into an online assembler like [https://defuse.ca/online-x86-assembler.htm](https://defuse.ca/online-x86-assembler.htm). Then just copy the generated shellcode.
+
+When using online compilers you will probably have to clean up the assembly a bit, like this:
 
 ```asm
 x$ = 32

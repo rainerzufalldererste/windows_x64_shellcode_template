@@ -19,7 +19,7 @@ __declspec(noinline) void shellcode_template()
   PEB *pProcessEnvironmentBlock = (PEB *)__readgsqword(0x60);
 
   // `pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList` contains a double linked list.
-  // `Flink` and `Blink` are the pointers to the next element.
+  // `Flink` and `Blink` are pointers to the next and previous element.
   //
   // All Windows executables should have the following module order.
   //  1. The module of the current executable.
@@ -94,7 +94,7 @@ __declspec(noinline) void shellcode_template()
 
   // Display a message box.
   x.text0 = 0x616C206174736148; // `Hasta la`
-  x.text1 = 0x0021617473697620; // ` vbista!\0`
+  x.text1 = 0x0021617473697620; // ` bista!\0`
 
   // MessageBoxA(NULL, "Hasta la vista", "", MB_OK);
   pMessageBoxA(NULL, (const char *)&x.text0, (const char *)&x.text1 + 7, MB_OK);
