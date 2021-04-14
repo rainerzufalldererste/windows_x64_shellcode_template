@@ -4,7 +4,8 @@ project(ProjectName)
   --Settings
   kind "ConsoleApp"
   language "C"
-  flags { "StaticRuntime", "FatalWarnings" }
+  flags { "FatalWarnings" }
+  staticruntime "On"
   
   dependson { "child_process" }
 
@@ -48,6 +49,7 @@ filter { "configurations:Debug*" }
 filter { "configurations:Release" }
 	defines { "NDEBUG" }
 	optimize "Speed"
-	flags { "NoFramePointer", "NoBufferSecurityCheck", "NoIncrementalLink" }
+	flags { "NoBufferSecurityCheck", "NoIncrementalLink" }
+  omitframepointer "On"
   editandcontinue "Off"
   symbols "On"

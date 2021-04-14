@@ -10,10 +10,10 @@ IF "%1"=="4" GOTO FOUR;
 ECHO INVALID PARAMETER (%1)
 
 :MANUAL_CONFIG
-ECHO 1. Visual Studio 2017 Solution
-ECHO 2. Visual Studio 2015 Solution
-ECHO 3. Visual Studio 2013 Solution
-ECHO 4. gmake2 Makefile
+ECHO 1. Visual Studio 2019 Solution
+ECHO 2. Visual Studio 2017 Solution
+ECHO 3. Visual Studio 2015 Solution
+ECHO 4. Visual Studio 2013 Solution
 
 CHOICE /N /C:1234 /M "[1-4]:"
 
@@ -24,23 +24,23 @@ IF ERRORLEVEL ==1 GOTO ONE
 GOTO END
 
 :FOUR
- ECHO Creating gmake2 Makefile...
- premake\premake5.exe gmake2
- GOTO END
-
-:THREE
  ECHO Creating VS2013 Project...
  premake\premake5.exe vs2013
  GOTO END
 
-:TWO
+:THREE
  ECHO Creating VS2015 Project...
  premake\premake5.exe vs2015
  GOTO END
 
-:ONE
+:TWO
  ECHO Creating VS2017 Project...
  premake\premake5.exe vs2017
+ GOTO END
+
+:ONE
+ ECHO Creating VS2019 Project...
+ premake\premake5.exe vs2019
  GOTO END
 
 :END

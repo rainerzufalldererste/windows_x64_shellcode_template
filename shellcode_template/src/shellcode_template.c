@@ -36,13 +36,13 @@ __declspec(noinline) void shellcode_template()
   IMAGE_DOS_HEADER *pDosHeader = (IMAGE_DOS_HEADER *)pKernel32TableEntry->DllBase;
 
   // In order to get the exported functions we need to go to the NT PE header.
-  IMAGE_NT_HEADERS *pNtHeader = (IMAGE_NT_HEADERS *)((uint8_t *)pDosHeader + pDosHeader->e_lfanew);
+  IMAGE_NT_HEADERS *pNtHeader = (IMAGE_NT_HEADERS *)((size_t)pDosHeader + pDosHeader->e_lfanew);
 
   // From the NtHeader we can extract the virtual address of the export directory of this module.
-  IMAGE_EXPORT_DIRECTORY *pExports = (IMAGE_EXPORT_DIRECTORY *)((uint8_t *)pDosHeader + pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+  IMAGE_EXPORT_DIRECTORY *pExports = (IMAGE_EXPORT_DIRECTORY *)((size_t)pDosHeader + pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
 
   // The exports directory contains both a list of function _names_ of this module and the associated _addresses_ of the functions.
-  const int32_t *pNameOffsets = (const int32_t *)((uint8_t *)pDosHeader + pExports->AddressOfNames);
+  const int32_t *pNameOffsets = (const int32_t *)((size_t)pDosHeader + pExports->AddressOfNames);
   
   // We will use this struct to store strings.
   // We are using a struct to make sure strings don't end up in another section of the executable where we wouldn't be able to address them in a different process.
@@ -57,16 +57,22 @@ __declspec(noinline) void shellcode_template()
   int32_t i = 0;
 
   // We're just extracting the first 8 bytes of the strings and compare them to `GetProcA`. We'll find it eventually.
-  while (*(uint64_t *)((char *)pDosHeader + pNameOffsets[i]) != x.text0)
+  while (*(uint64_t *)((size_t)pDosHeader + pNameOffsets[i]) != x.text0)
     ++i;
 
   // We have found the index of `GetProcAddress`.
 
-  // Not let's get the function offsets in order to retrieve the location of `GetProcAddress` in memory.
-  const int32_t *pFunctionOffsets = (const int32_t *)((uint8_t *)pDosHeader + pExports->AddressOfFunctions);
+  // The entry at an index in `AddressOfNames` corresponds to an entry at the same index in `AddressOfNameOrdinals`, which resolves the index of a given name to it's corresponding entry in `AddressOfFunctions`. (DLLs can export unnamed functions, which will not be listed in `AddressOfNames`.)
+  // Let's get the function name ordinal offsets and function offsets in order to retrieve the location of `GetProcAddress` in memory.
+  const int16_t *pFunctionNameOrdinalOffsets = (const int16_t *)((size_t)pDosHeader + pExports->AddressOfNameOrdinals);
+  const int32_t *pFunctionOffsets = (const int32_t *)((size_t)pDosHeader + pExports->AddressOfFunctions);
 
+  // Now resolve the index in `pFunctionOffsets` from `pFunctionNameOrdinalOffsets` to get the address of the desired function in memory.
   typedef FARPROC(*GetProcAddressFunc)(HMODULE, const char *);
-  GetProcAddressFunc pGetProcAddress = (GetProcAddressFunc)(const void *)((uint8_t *)pDosHeader + pFunctionOffsets[i]);
+  GetProcAddressFunc pGetProcAddress = (GetProcAddressFunc)(const void *)((size_t)pDosHeader + pFunctionOffsets[pFunctionNameOrdinalOffsets[i]]);
+  
+  // For `kernel32.dll` this would technically work as well, because the index in `AddressOfNames` seems to always correspond to the the index in `AddressOfFunctions`, however this isn't technically correct.
+  // GetProcAddressFunc pGetProcAddress = (GetProcAddressFunc)(const void *)((size_t)pDosHeader + pFunctionOffsets[i]);
 
   // Now that we've got `GetProcAddress`, let's use it to get `LoadLibraryA`.
 
@@ -94,7 +100,7 @@ __declspec(noinline) void shellcode_template()
 
   // Display a message box.
   x.text0 = 0x616C206174736148; // `Hasta la`
-  x.text1 = 0x0021617473697620; // ` bista!\0`
+  x.text1 = 0x0021617473697620; // ` vista!\0`
 
   // MessageBoxA(NULL, "Hasta la vista", "", MB_OK);
   pMessageBoxA(NULL, (const char *)&x.text0, (const char *)&x.text1 + 7, MB_OK);
